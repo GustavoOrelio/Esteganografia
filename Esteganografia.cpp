@@ -26,19 +26,16 @@ public:
         }
 
         char ch;
-        for (int i = 0; i < image.TellWidth() && textFileStream.get(ch); ++i)
+        int pixelIndex = 0;
+        while (textFileStream.get(ch))
         {
-            // Itera pelos pixels da imagem e substitui os bits menos significativos pelos bits do texto
-            for (int j = 0; j < 3; ++j)
-            { // R, G, B
-                if (i < image.TellWidth())
-                {
-                    image(i, 0)->Red = replaceLSB(image(i, 0)->Red, ch);
-                    image(i, 0)->Green = replaceLSB(image(i, 0)->Green, ch);
-                    image(i, 0)->Blue = replaceLSB(image(i, 0)->Blue, ch);
-                    ++i;
-                }
-            }
+            // 3 bits no canal vermelho
+            image(pixelIndex, 0)->Red = replaceLSB(image(pixelIndex, 0)->Red, (ch >> 5) & 7, 3);
+            // 3 bits no canal verde
+            image(pixelIndex, 0)->Green = replaceLSB(image(pixelIndex, 0)->Green, (ch >> 2) & 7, 3);
+            // 2 bits no canal azul
+            image(pixelIndex, 0)->Blue = replaceLSB(image(pixelIndex, 0)->Blue, ch & 3, 2);
+            pixelIndex++;
         }
 
         textFileStream.close();
@@ -56,9 +53,9 @@ public:
     bool decodeTextFromImage()
     {
         BMP image;
-        if (!image.ReadFromFile(inputImageFile))
+        if (!image.ReadFromFile(outputImageFile))
         {
-            std::cerr << "Erro ao abrir a imagem de entrada." << std::endl;
+            std::cerr << "Erro ao abrir a imagem de saida." << std::endl;
             return false;
         }
 
@@ -69,24 +66,14 @@ public:
             return false;
         }
 
-        char ch = 0;
-        for (int i = 0; i < image.TellWidth(); ++i)
+        for (int i = 0; i < image.TellWidth(); i++)
         {
-            // Itera pelos pixels da imagem e extrai os bits menos significativos para formar a mensagem
-            for (int j = 0; j < 3; ++j)
-            { // R, G, B
-                if (i < image.TellWidth())
-                {
-                    ch = (ch << 1) | (image(i, 0)->Red & 1);
-                    ch = (ch << 1) | (image(i, 0)->Green & 1);
-                    ch = (ch << 1) | (image(i, 0)->Blue & 1);
-                    ++i;
-                }
-            }
+            char ch = 0;
+            ch |= (image(i, 0)->Red & 7) << 5;
+            ch |= (image(i, 0)->Green & 7) << 2;
+            ch |= image(i, 0)->Blue & 3;
             if (ch == '\0')
-            {
-                break; // Termina a leitura quando encontrar o caractere nulo
-            }
+                break;
             textFileStream.put(ch);
         }
 
@@ -102,10 +89,10 @@ private:
     const char *textFile;
     const char *outputTextFile;
 
-    // Função para substituir o bit menos significativo de um byte com um novo bit
-    uint8_t replaceLSB(uint8_t byte, char newBit)
+    // Função para substituir os bits menos significativos de um byte com novos bits
+    uint8_t replaceLSB(uint8_t byte, int newBits, int bitCount)
     {
-        return (byte & 0xFE) | (newBit - '0');
+        return (byte & (0xFF << bitCount)) | newBits;
     }
 };
 
@@ -118,10 +105,10 @@ int main()
 
     TextToImageConverter converter(inputImageFile, outputImageFile, textFile, outputTextFile);
 
-    // Codifica a mensagem na imagem
+    // Codificar a mensagem na imagem
     if (converter.encodeTextInImage())
     {
-        // Decodifica a mensagem da imagem
+        // Decodificar a mensagem da imagem
         if (converter.decodeTextFromImage())
         {
             return 0;
