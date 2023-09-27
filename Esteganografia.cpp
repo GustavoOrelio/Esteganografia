@@ -27,15 +27,36 @@ public:
 
         char ch;
         int pixelIndex = 0;
+        int totalPixels = image.TellWidth() * image.TellHeight();
+
         while (textFileStream.get(ch))
         {
-            // 3 bits no canal vermelho
-            image(pixelIndex, 0)->Red = replaceLSB(image(pixelIndex, 0)->Red, (ch >> 5) & 7, 3);
-            // 3 bits no canal verde
-            image(pixelIndex, 0)->Green = replaceLSB(image(pixelIndex, 0)->Green, (ch >> 2) & 7, 3);
-            // 2 bits no canal azul
-            image(pixelIndex, 0)->Blue = replaceLSB(image(pixelIndex, 0)->Blue, ch & 3, 2);
-            pixelIndex++;
+            if (pixelIndex >= totalPixels || pixelIndex < 0)
+            {
+                std::cerr << "Erro: Índice de pixel fora dos limites." << std::endl;
+            }
+            else
+            {
+                // Extração dos bits da mensagem para o canal vermelho (3 bits)
+                unsigned char redBits = (ch >> 5) & 7;
+
+                // Substituição dos 3 bits menos significativos do canal vermelho
+                image(pixelIndex, 0)->Red = replaceLSB(image(pixelIndex, 0)->Red, redBits, 3);
+
+                // Extração dos bits da mensagem para o canal verde (3 bits)
+                unsigned char greenBits = (ch >> 2) & 7; 
+
+                // Substituição dos 3 bits menos significativos do canal verde
+                image(pixelIndex, 0)->Green = replaceLSB(image(pixelIndex, 0)->Green, greenBits, 3);
+
+                // Extração dos bits da mensagem para o canal azul (2 bits)
+                unsigned char blueBits = ch & 3; 
+
+                // Substituição dos 2 bits menos significativos do canal azul
+                image(pixelIndex, 0)->Blue = replaceLSB(image(pixelIndex, 0)->Blue, blueBits, 2);
+            }
+
+			pixelIndex++;
         }
 
         textFileStream.close();
@@ -90,7 +111,7 @@ private:
     const char *outputTextFile;
 
     // Função para substituir os bits menos significativos de um byte com novos bits
-    uint8_t replaceLSB(uint8_t byte, int newBits, int bitCount)
+    uint8_t replaceLSB(uint8_t byte, uint8_t newBits, int bitCount)
     {
         return (byte & (0xFF << bitCount)) | newBits;
     }
