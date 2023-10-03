@@ -87,16 +87,48 @@ public:
             return false;
         }
 
-        for (int i = 0; i < image.TellWidth(); i++)
-        {
-            char ch = 0;
-            ch |= (image(i, 0)->Red & 7) << 5;
-            ch |= (image(i, 0)->Green & 7) << 2;
-            ch |= image(i, 0)->Blue & 3;
-            if (ch == '\0')
-                break;
-            textFileStream.put(ch);
-        }
+	// Inicialização do índice do pixel
+	int pixelIndex = 0;
+	
+	// Inicialização de um buffer de caracteres para armazenar os caracteres da mensagem
+	std::ostringstream messageBuffer;
+	
+	// Loop para percorrer os pixels da imagem
+	while (pixelIndex < totalPixels)
+	{
+	    // Recuperação dos bits do canal vermelho (3 bits)
+	    unsigned char redBits = getLSB(image(pixelIndex, 0)->Red, 3);
+	
+	    // Recuperação dos bits do canal verde (3 bits)
+	    unsigned char greenBits = getLSB(image(pixelIndex, 0)->Green, 3);
+	
+	    // Recuperação dos bits do canal azul (2 bits)
+	    unsigned char blueBits = getLSB(image(pixelIndex, 0)->Blue, 2);
+	
+	    // Composição dos bits em um caractere
+	    unsigned char ch = (redBits << 5) | (greenBits << 2) | blueBits;
+	
+	    // Adição do caractere ao buffer da mensagem
+	    messageBuffer.put(ch);
+	
+	    // Atualização do índice do pixel
+	    pixelIndex++;
+	}
+	
+	// Obtém a mensagem completa do buffer
+	std::string mensagem = messageBuffer.str();
+	textFileStream.put(mensagem);
+	    
+        // for (int i = 0; i < image.TellWidth(); i++)
+        // {
+        //     char ch = 0;
+        //     ch |= (image(i, 0)->Red & 7) << 5;
+        //     ch |= (image(i, 0)->Green & 7) << 2;
+        //     ch |= image(i, 0)->Blue & 3;
+        //     if (ch == '\0')
+        //         break;
+        //     textFileStream.put(ch);
+        // }
 
         textFileStream.close();
 
