@@ -12,11 +12,13 @@ private:
     const char *textFile;
     const char *outputTextFile;
 
+    // Função para obter os bits menos significativos de um byte
     uint8_t getLSB(uint8_t byte, int bitCount)
     {
         return byte & ((1 << bitCount) - 1);
     }
 
+    // Função para substituir os bits menos significativos de um byte
     uint8_t replaceLSB(uint8_t byte, uint8_t newBits, int bitCount)
     {
         return (byte & (0xFF << bitCount)) | newBits;
@@ -26,9 +28,11 @@ public:
     TextToImageConverter(const char *inputImageFile, const char *outputImageFile, const char *textFile, const char *outputTextFile)
         : inputImageFile(inputImageFile), outputImageFile(outputImageFile), textFile(textFile), outputTextFile(outputTextFile) {}
 
+    // Função para codificar o texto na imagem
     bool encodeTextInImage()
     {
         BMP image;
+
         if (!image.ReadFromFile(inputImageFile))
         {
             std::cerr << "Erro ao abrir a imagem de entrada." << std::endl;
@@ -46,6 +50,7 @@ public:
         int pixelIndex = 0;
         int totalPixels = image.TellWidth() * image.TellHeight();
 
+        // Codifica cada caractere do texto nos pixels da imagem
         while (textFileStream.get(ch))
         {
             if (pixelIndex >= totalPixels)
@@ -54,7 +59,6 @@ public:
                 return false;
             }
 
-            // Codifica a mensagem nos canais RGB da imagem
             image(pixelIndex, 0)->Red = replaceLSB(image(pixelIndex, 0)->Red, (ch >> 5) & 7, 3);
             image(pixelIndex, 0)->Green = replaceLSB(image(pixelIndex, 0)->Green, (ch >> 2) & 7, 3);
             image(pixelIndex, 0)->Blue = replaceLSB(image(pixelIndex, 0)->Blue, ch & 3, 2);
@@ -82,9 +86,11 @@ public:
         return true;
     }
 
+    // Função para decodificar o texto da imagem
     bool decodeTextFromImage()
     {
         BMP image;
+
         if (!image.ReadFromFile(outputImageFile))
         {
             std::cerr << "Erro ao abrir a imagem de saída." << std::endl;
@@ -102,9 +108,11 @@ public:
         int pixelIndex = 0;
 
         std::ostringstream messageBuffer;
+        // Decodifica a mensagem da imagem
         while (pixelIndex < totalPixels)
         {
             unsigned char ch = (getLSB(image(pixelIndex, 0)->Red, 3) << 5) | (getLSB(image(pixelIndex, 0)->Green, 3) << 2) | getLSB(image(pixelIndex, 0)->Blue, 2);
+            // Verifica se é o final da mensagem com um caractere nulo '\0'
             if (ch == '\0')
                 break;
 
