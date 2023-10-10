@@ -32,9 +32,10 @@ public:
 
         while (textFileStream.get(ch))
         {
-            if (pixelIndex >= totalPixels || pixelIndex < 0)
+            if (pixelIndex >= totalPixels)
             {
-                std::cerr << "Erro: Índice de pixel fora dos limites." << std::endl;
+                std::cerr << "Erro: A mensagem é muito longa para ser codificada na imagem." << std::endl;
+                return false; // Pare se a mensagem for muito longa
             }
             else
             {
@@ -58,6 +59,15 @@ public:
             }
 
 			pixelIndex++;
+        }
+
+        if (pixelIndex < totalPixels)
+        {
+            int x = pixelIndex % image.TellWidth();
+            int y = pixelIndex / image.TellWidth();
+            image(x, y)->Red = replaceLSB(image(x, y)->Red, 0, 3);
+            image(x, y)->Green = replaceLSB(image(x, y)->Green, 0, 3);
+            image(x, y)->Blue = replaceLSB(image(x, y)->Blue, 0, 2);
         }
 
         textFileStream.close();
@@ -101,8 +111,11 @@ public:
             unsigned char greenBits = getLSB(image(x, y)->Green, 3);
             unsigned char blueBits = getLSB(image(x, y)->Blue, 2);
             unsigned char ch = (redBits << 5) | (greenBits << 2) | blueBits;
+
+            if (ch == '\0')
+                break;
+
             messageBuffer.put(ch);
-            
             pixelIndex++;
         }
 
