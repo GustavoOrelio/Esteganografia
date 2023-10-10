@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include "EasyBMP.h"
 #include <cstdint>
 
@@ -87,48 +88,23 @@ public:
             return false;
         }
 
-	// Inicialização do índice do pixel
-	int pixelIndex = 0;
-	
-	// Inicialização de um buffer de caracteres para armazenar os caracteres da mensagem
-	std::ostringstream messageBuffer;
-	
-	// Loop para percorrer os pixels da imagem
-	while (pixelIndex < totalPixels)
-	{
-	    // Recuperação dos bits do canal vermelho (3 bits)
-	    unsigned char redBits = getLSB(image(pixelIndex, 0)->Red, 3);
-	
-	    // Recuperação dos bits do canal verde (3 bits)
-	    unsigned char greenBits = getLSB(image(pixelIndex, 0)->Green, 3);
-	
-	    // Recuperação dos bits do canal azul (2 bits)
-	    unsigned char blueBits = getLSB(image(pixelIndex, 0)->Blue, 2);
-	
-	    // Composição dos bits em um caractere
-	    unsigned char ch = (redBits << 5) | (greenBits << 2) | blueBits;
-	
-	    // Adição do caractere ao buffer da mensagem
-	    messageBuffer.put(ch);
-	
-	    // Atualização do índice do pixel
-	    pixelIndex++;
-	}
-	
-	// Obtém a mensagem completa do buffer
-	std::string mensagem = messageBuffer.str();
-	textFileStream.put(mensagem);
-	    
-        // for (int i = 0; i < image.TellWidth(); i++)
-        // {
-        //     char ch = 0;
-        //     ch |= (image(i, 0)->Red & 7) << 5;
-        //     ch |= (image(i, 0)->Green & 7) << 2;
-        //     ch |= image(i, 0)->Blue & 3;
-        //     if (ch == '\0')
-        //         break;
-        //     textFileStream.put(ch);
-        // }
+        int totalPixels = image.TellWidth() * image.TellHeight(); 
+        int pixelIndex = 0;
+        int x = pixelIndex % image.TellWidth();
+        int y = pixelIndex / image.TellWidth();
+        std::ostringstream messageBuffer;
+        while (pixelIndex < totalPixels)
+        {
+            unsigned char redBits = getLSB(image(x, y)->Red, 3);
+            unsigned char greenBits = getLSB(image(x, y)->Green, 3);
+            unsigned char blueBits = getLSB(image(x, y)->Blue, 2);
+            unsigned char ch = (redBits << 5) | (greenBits << 2) | blueBits;
+            messageBuffer.put(ch);
+            pixelIndex++;
+        }
+
+        std::string mensagem = messageBuffer.str();
+        textFileStream << mensagem; 
 
         textFileStream.close();
 
@@ -141,6 +117,12 @@ private:
     const char *outputImageFile;
     const char *textFile;
     const char *outputTextFile;
+
+    // Função getLSB adicionada para extrair os bits menos significativos
+    uint8_t getLSB(uint8_t byte, int bitCount)
+    {
+        return byte & ((1 << bitCount) - 1);
+    }
 
     // Função para substituir os bits menos significativos de um byte com novos bits
     uint8_t replaceLSB(uint8_t byte, uint8_t newBits, int bitCount)
