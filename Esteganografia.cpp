@@ -90,16 +90,19 @@ public:
 
         int totalPixels = image.TellWidth() * image.TellHeight(); 
         int pixelIndex = 0;
-        int x = pixelIndex % image.TellWidth();
-        int y = pixelIndex / image.TellWidth();
+        
         std::ostringstream messageBuffer;
         while (pixelIndex < totalPixels)
         {
+            int x = pixelIndex % image.TellWidth();
+            int y = pixelIndex / image.TellWidth();
+
             unsigned char redBits = getLSB(image(x, y)->Red, 3);
             unsigned char greenBits = getLSB(image(x, y)->Green, 3);
             unsigned char blueBits = getLSB(image(x, y)->Blue, 2);
             unsigned char ch = (redBits << 5) | (greenBits << 2) | blueBits;
             messageBuffer.put(ch);
+            
             pixelIndex++;
         }
 
