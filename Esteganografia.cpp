@@ -6,6 +6,22 @@
 
 class TextToImageConverter
 {
+private:
+    const char *inputImageFile;
+    const char *outputImageFile;
+    const char *textFile;
+    const char *outputTextFile;
+
+    uint8_t getLSB(uint8_t byte, int bitCount)
+    {
+        return byte & ((1 << bitCount) - 1);
+    }
+
+    uint8_t replaceLSB(uint8_t byte, uint8_t newBits, int bitCount)
+    {
+        return (byte & (0xFF << bitCount)) | newBits;
+    }
+
 public:
     TextToImageConverter(const char *inputImageFile, const char *outputImageFile, const char *textFile, const char *outputTextFile)
         : inputImageFile(inputImageFile), outputImageFile(outputImageFile), textFile(textFile), outputTextFile(outputTextFile) {}
@@ -35,39 +51,23 @@ public:
             if (pixelIndex >= totalPixels)
             {
                 std::cerr << "Erro: A mensagem é muito longa para ser codificada na imagem." << std::endl;
-                return false; // Pare se a mensagem for muito longa
-            }
-            else
-            {
-                // Extração dos bits da mensagem para o canal vermelho (3 bits)
-                unsigned char redBits = (ch >> 5) & 7;
-
-                // Substituição dos 3 bits menos significativos do canal vermelho
-                image(pixelIndex, 0)->Red = replaceLSB(image(pixelIndex, 0)->Red, redBits, 3);
-
-                // Extração dos bits da mensagem para o canal verde (3 bits)
-                unsigned char greenBits = (ch >> 2) & 7; 
-
-                // Substituição dos 3 bits menos significativos do canal verde
-                image(pixelIndex, 0)->Green = replaceLSB(image(pixelIndex, 0)->Green, greenBits, 3);
-
-                // Extração dos bits da mensagem para o canal azul (2 bits)
-                unsigned char blueBits = ch & 3; 
-
-                // Substituição dos 2 bits menos significativos do canal azul
-                image(pixelIndex, 0)->Blue = replaceLSB(image(pixelIndex, 0)->Blue, blueBits, 2);
+                return false;
             }
 
-			pixelIndex++;
+            // Codifica a mensagem nos canais RGB da imagem
+            image(pixelIndex, 0)->Red = replaceLSB(image(pixelIndex, 0)->Red, (ch >> 5) & 7, 3);
+            image(pixelIndex, 0)->Green = replaceLSB(image(pixelIndex, 0)->Green, (ch >> 2) & 7, 3);
+            image(pixelIndex, 0)->Blue = replaceLSB(image(pixelIndex, 0)->Blue, ch & 3, 2);
+
+            pixelIndex++;
         }
 
+        // Marca o final da mensagem com um caractere nulo '\0'
         if (pixelIndex < totalPixels)
         {
-            int x = pixelIndex % image.TellWidth();
-            int y = pixelIndex / image.TellWidth();
-            image(x, y)->Red = replaceLSB(image(x, y)->Red, 0, 3);
-            image(x, y)->Green = replaceLSB(image(x, y)->Green, 0, 3);
-            image(x, y)->Blue = replaceLSB(image(x, y)->Blue, 0, 2);
+            image(pixelIndex, 0)->Red = replaceLSB(image(pixelIndex, 0)->Red, 0, 3);
+            image(pixelIndex, 0)->Green = replaceLSB(image(pixelIndex, 0)->Green, 0, 3);
+            image(pixelIndex, 0)->Blue = replaceLSB(image(pixelIndex, 0)->Blue, 0, 2);
         }
 
         textFileStream.close();
@@ -87,7 +87,7 @@ public:
         BMP image;
         if (!image.ReadFromFile(outputImageFile))
         {
-            std::cerr << "Erro ao abrir a imagem de saida." << std::endl;
+            std::cerr << "Erro ao abrir a imagem de saída." << std::endl;
             return false;
         }
 
@@ -98,20 +98,13 @@ public:
             return false;
         }
 
-        int totalPixels = image.TellWidth() * image.TellHeight(); 
+        int totalPixels = image.TellWidth() * image.TellHeight();
         int pixelIndex = 0;
-        
+
         std::ostringstream messageBuffer;
         while (pixelIndex < totalPixels)
         {
-            int x = pixelIndex % image.TellWidth();
-            int y = pixelIndex / image.TellWidth();
-
-            unsigned char redBits = getLSB(image(x, y)->Red, 3);
-            unsigned char greenBits = getLSB(image(x, y)->Green, 3);
-            unsigned char blueBits = getLSB(image(x, y)->Blue, 2);
-            unsigned char ch = (redBits << 5) | (greenBits << 2) | blueBits;
-
+            unsigned char ch = (getLSB(image(pixelIndex, 0)->Red, 3) << 5) | (getLSB(image(pixelIndex, 0)->Green, 3) << 2) | getLSB(image(pixelIndex, 0)->Blue, 2);
             if (ch == '\0')
                 break;
 
@@ -119,31 +112,11 @@ public:
             pixelIndex++;
         }
 
-        std::string mensagem = messageBuffer.str();
-        textFileStream << mensagem; 
-
+        textFileStream << messageBuffer.str();
         textFileStream.close();
 
         std::cout << "Mensagem recuperada e salva em '" << outputTextFile << "'." << std::endl;
         return true;
-    }
-
-private:
-    const char *inputImageFile;
-    const char *outputImageFile;
-    const char *textFile;
-    const char *outputTextFile;
-
-    // Função getLSB adicionada para extrair os bits menos significativos
-    uint8_t getLSB(uint8_t byte, int bitCount)
-    {
-        return byte & ((1 << bitCount) - 1);
-    }
-
-    // Função para substituir os bits menos significativos de um byte com novos bits
-    uint8_t replaceLSB(uint8_t byte, uint8_t newBits, int bitCount)
-    {
-        return (byte & (0xFF << bitCount)) | newBits;
     }
 };
 
@@ -156,18 +129,9 @@ int main()
 
     TextToImageConverter converter(inputImageFile, outputImageFile, textFile, outputTextFile);
 
-    // Codificar a mensagem na imagem
-    if (converter.encodeTextInImage())
+    if (converter.encodeTextInImage() && converter.decodeTextFromImage())
     {
-        // Decodificar a mensagem da imagem
-        if (converter.decodeTextFromImage())
-        {
-            return 0;
-        }
-        else
-        {
-            return 1;
-        }
+        return 0;
     }
     else
     {
