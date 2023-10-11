@@ -24,6 +24,13 @@ private:
         return (byte & (0xFF << bitCount)) | newBits;
     }
 
+    void modifyRGBChannels(BMP &image, int pixelIndex, char ch)
+    {
+        image(pixelIndex, 0)->Red = replaceLSB(image(pixelIndex, 0)->Red, (ch >> 5) & 7, 3);
+        image(pixelIndex, 0)->Green = replaceLSB(image(pixelIndex, 0)->Green, (ch >> 2) & 7, 3);
+        image(pixelIndex, 0)->Blue = replaceLSB(image(pixelIndex, 0)->Blue, ch & 3, 2);
+    }
+
 public:
     TextToImageConverter(const char *inputImageFile, const char *outputImageFile, const char *textFile, const char *outputTextFile)
         : inputImageFile(inputImageFile), outputImageFile(outputImageFile), textFile(textFile), outputTextFile(outputTextFile) {}
@@ -59,19 +66,14 @@ public:
                 return false;
             }
 
-            image(pixelIndex, 0)->Red = replaceLSB(image(pixelIndex, 0)->Red, (ch >> 5) & 7, 3);
-            image(pixelIndex, 0)->Green = replaceLSB(image(pixelIndex, 0)->Green, (ch >> 2) & 7, 3);
-            image(pixelIndex, 0)->Blue = replaceLSB(image(pixelIndex, 0)->Blue, ch & 3, 2);
-
+            modifyRGBChannels(image, pixelIndex, ch);
             pixelIndex++;
         }
 
         // Marca o final da mensagem com um caractere nulo '\0'
         if (pixelIndex < totalPixels)
         {
-            image(pixelIndex, 0)->Red = replaceLSB(image(pixelIndex, 0)->Red, 0, 3);
-            image(pixelIndex, 0)->Green = replaceLSB(image(pixelIndex, 0)->Green, 0, 3);
-            image(pixelIndex, 0)->Blue = replaceLSB(image(pixelIndex, 0)->Blue, 0, 2);
+            modifyRGBChannels(image, pixelIndex, '\0');
         }
 
         textFileStream.close();
